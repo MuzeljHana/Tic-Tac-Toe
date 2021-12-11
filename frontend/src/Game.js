@@ -1,11 +1,11 @@
 import React from "react";
-import { Group, Layer, Shape, Stage } from 'react-konva';
+import { Layer, Shape, Stage } from 'react-konva';
 import Board from "./Gameboard/Board";
 import Cross from "./Gameboard/Cross";
 import Circle from "./Gameboard/Circle";
 
 function Game(props) {
-    const size = 600;
+    const size = (window.innerWidth < 600) ? window.innerWidth - 10 : 600;
     const padding = 30;
 
     const click = (e) => {
@@ -110,7 +110,7 @@ function Game(props) {
             for (let y = 0; y < gameBoard.length; y++) {
                 for (let x = 0; x < gameBoard.length; x++) {
                     if (gameBoard[y][x] == "EMPTY") {
-                        
+
                     }
                 }
             }
@@ -118,15 +118,17 @@ function Game(props) {
     }
 
     return (
-        <Stage width={size} height={size} onClick={click} >
-            <Board size={size} />
-            <Layer>
-                {drawPieces()}
-            </Layer>
-            <Layer>
-                {drawFinishLine()}
-            </Layer>
-        </Stage>
+        <div style={{display: "flex", justifyContent: "center"}}>
+            <Stage width={size} height={size} onClick={click} >
+                <Board size={size} />
+                <Layer>
+                    {drawPieces()}
+                </Layer>
+                <Layer>
+                    {drawFinishLine()}
+                </Layer>
+            </Stage>
+        </div>
     );
 }
 

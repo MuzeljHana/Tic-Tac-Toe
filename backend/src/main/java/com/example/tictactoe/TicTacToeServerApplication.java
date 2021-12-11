@@ -1,13 +1,13 @@
-package com.example.gameserver;
+package com.example.tictactoe;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class GameServerApplication {
+public class TicTacToeServerApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(GameServerApplication.class, args);
+        SpringApplication.run(TicTacToeServerApplication.class, args);
     }
 
 }

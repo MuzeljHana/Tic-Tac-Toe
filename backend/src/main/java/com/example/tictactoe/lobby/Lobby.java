@@ -1,6 +1,6 @@
-package com.example.gameserver.lobby;
+package com.example.tictactoe.lobby;
 
-import com.example.gameserver.game.*;
+import com.example.tictactoe.game.*;
 
 import java.util.ArrayList;
 import java.util.List;

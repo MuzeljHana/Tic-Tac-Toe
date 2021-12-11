@@ -1,4 +1,4 @@
-package com.example.gameserver.game;
+package com.example.tictactoe.game;
 
 public enum State {
     WAITING,

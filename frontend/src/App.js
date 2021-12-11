@@ -1,114 +1,141 @@
 import React from "react";
 import { Client } from "@stomp/stompjs";
 import axios from "axios";
-import { Col, Container, Row, Form, Button, ListGroup, Badge } from "react-bootstrap";
+import { Col, Container, Row, Button, Card } from "react-bootstrap";
 import Game from "./Game";
+import Menu from "./Menu";
 
 const socketClient = new Client({ brokerURL: "ws://localhost:8080/stomp" });
 axios.defaults.baseURL = "http://localhost:8080";
 
 function App() {
-    const [lobbies, setLobbies] = React.useState([]);
-    const [game, setGame] = React.useState({
+    const [socketSub, setSocketSub] = React.useState();
+    const [lobby, setLobby] = React.useState({
+        id: "",
+        state: "",
         game: {}
     });
-    const [player, setPlayer] = React.useState();
-
-    const [menu, setMenu] = React.useState({
-        lobbyID: ""
+    const [player, setPlayer] = React.useState({
+        piece: ""
     });
 
+    const [showModal, setShowModal] = React.useState(true);
+
     React.useEffect(() => {
-        axios.get("/lobby").then((response) => {
-            setLobbies(response.data);
-        })
-    }, []);
+        window.addEventListener("beforeunload", (e) => {
+            e.preventDefault();
+            disconnectSocket();
+
+            axios.delete(`/lobby/${lobby.id}/player/${player.id}`).then((response) => {
+                console.log(response.data);
+            });
+        });
+    });
 
     const join = (lobbyID) => {
-        axios.put(`/lobby/${lobbyID}`).then((response) => {
-            let players = response.data.players;
-            setPlayer(players[players.length - 1]);
-            setGame(response.data);
-            console.log("JOIN", response.data);
+        axios.get("/lobby").then((response) => {
+            let lobbies = response.data;
+            if (lobbies.find((el) => { return el.id == lobbyID }) != undefined) {
+                axios.put(`/lobby/${lobbyID}`).then((response) => {
+                    let players = response.data.players;
+                    setLobby({
+                        ...lobby,
+                        ...response.data
+                    });
+                    setPlayer(players[players.length - 1]);
 
-            socketClient.onConnect = (frame) => {
-                socketClient.subscribe(`/topic/lobby/${lobbyID}`, receive);
-            };
-            socketClient.activate();
-        })
-    }
+                    console.log("JOIN", {
+                        ...lobby,
+                        ...response.data
+                    },
+                        players[players.length - 1]
+                    );
+
+                    socketClient.onConnect = (frame) => {
+                        setSocketSub(socketClient.subscribe(`/topic/lobby/${lobbyID}`, receive));
+                    };
+                    socketClient.activate();
+
+                    toggleModal();
+                });
+            }
+        });
+
+    };
 
     const receive = (message) => {
-        console.log(JSON.parse(message.body));
-        setGame(JSON.parse(message.body));
-    }
+        let messageBody = JSON.parse(message.body);
+        console.log("RECEIVE", messageBody);
+        setLobby(messageBody);
+    };
 
     const send = (pos) => {
-        if (player.piece == game.game.nextPiece && 
-            game.game.gameBoard[pos.y][pos.x] == "EMPTY" && 
-            game.state != "DONE") {
+        if (player.piece == lobby.game.nextPiece &&
+            lobby.game.gameBoard[pos.y][pos.x] == "EMPTY" &&
+            lobby.state != "DONE") {
+            console.log("SEND", pos);
             socketClient.publish({
-                destination: `/app/lobby/${game.id}/player/${player.id}`,
+                destination: `/app/lobby/${lobby.id}/player/${player.id}`,
                 body: JSON.stringify(pos)
             });
         }
-    }
+    };
 
-    const disconnect = () => {
-
-    }
+    const disconnectSocket = () => {
+        socketSub.unsubscribe();
+        socketClient.deactivate();
+    };
 
     const createLobby = () => {
         axios.post("/lobby").then((response) => {
             join(response.data.id);
-
-            let oldLobbies = Array.from(lobbies);
-            oldLobbies.push(response.data);
-            setLobbies(oldLobbies);
         });
-    }
-
-    const joinLobby = () => {
-        join(menu.lobbyID);
     };
 
-    const inputChange = (e) => {
-        setMenu({
-            ...menu,
-            [e.target.name]: e.target.value
-        });
-    }
+    const joinLobby = () => {
+        join(lobby.id);
+    };
+
+    const disconnectHandle = () => {
+        disconnectSocket();
+        toggleModal();
+    };
+
+    const changeInput = (e) => {
+        setLobby({
+            ...lobby,
+            id: e.target.value
+        })
+    };
+
+    const toggleModal = () => {
+        setShowModal(!showModal);
+    };
 
     return (
         <Container>
-            <Row>
+            <Menu show={showModal} onHide={toggleModal} joinLobby={joinLobby} createLobby={createLobby} lobbyID={changeInput} />
+            <Row className="justify-content-md-end vh-100 align-items-center">
                 <Col>
-                    <ListGroup as="ol" numbered>
-                        {
-                            lobbies.map((lobby) => {
-                                return (
-                                    <ListGroup.Item as="li" className="d-flex justify-content-between align-items-start">
-                                        <div>{lobby.id}</div>
-                                        <Badge variant="primary" pill>{lobby.state}</Badge>
-                                    </ListGroup.Item>
-                                )
-                            })
-                        }
-                    </ListGroup>
-                    <Form>
-                        <Form.Group className="mb-3" controlId="formBasicEmail">
-                            <Form.Label>Lobby ID</Form.Label>
-                            <Form.Control onChange={inputChange} type="text" name="lobbyID" placeholder="973b8e76-5503-11ec-bf63-0242ac130002" />
-                        </Form.Group>
-                        <Button variant="primary" onClick={joinLobby} >Join</Button>
-                        <Button variant="secondary" onClick={createLobby} >Create</Button>
-                    </Form>
+                    <Game game={lobby} move={send} />
                 </Col>
-                <Col>
-                    <Game game={game} move={send} />
-                </Col>
-                <Col>
-                    <p>Next: {game.game.nextPiece}</p>
+                <Col sm={3}>
+                    <Card>
+                        <Card.Body>
+                            <Card.Title>Game: {lobby.state.toLowerCase()}</Card.Title>
+                            <Card.Subtitle className="mb-2 small">
+                                <code className="text-muted">{lobby.id}</code>
+                            </Card.Subtitle>
+                            <Card.Text>
+                                <Row>
+                                    <Col>
+                                        <span>Your piece: {player.piece.toLowerCase()}</span>
+                                    </Col>
+                                </Row>
+                            </Card.Text>
+                            <Button variant="outline-secondary" onClick={disconnectHandle}>Disconnect</Button>
+                        </Card.Body>
+                    </Card>
                 </Col>
             </Row>
         </Container>

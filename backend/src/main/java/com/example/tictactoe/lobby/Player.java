@@ -1,6 +1,6 @@
-package com.example.gameserver.lobby;
+package com.example.tictactoe.lobby;
 
-import com.example.gameserver.game.Piece;
+import com.example.tictactoe.game.Piece;
 
 public class Player {
     private String id;

@@ -1,8 +1,8 @@
-package com.example.gameserver;
+package com.example.tictactoe;
 
-import com.example.gameserver.game.Move;
-import com.example.gameserver.lobby.Player;
-import com.example.gameserver.lobby.Lobby;
+import com.example.tictactoe.game.Move;
+import com.example.tictactoe.lobby.Player;
+import com.example.tictactoe.lobby.Lobby;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -15,7 +15,7 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin("*")
-public class MessageController {
+public class LobbyController {
 
     private HashMap<String, Lobby> lobbies = new HashMap<>();
 
@@ -35,6 +35,22 @@ public class MessageController {
     public Lobby joinLobby(@PathVariable String lobbyID) {
         Lobby lobby = lobbies.get(lobbyID);
         lobby.joinLobby();
+        return lobby;
+    }
+
+    @DeleteMapping("/lobby/{lobbyID}/player/{playerID}")
+    public Lobby leaveLobby(@DestinationVariable String lobbyID, @DestinationVariable String playerID) {
+        Lobby lobby = lobbies.get(lobbyID);
+
+        Optional<Player> player = lobby.getPlayers().stream().filter(el -> el.getId().equals(playerID)).findFirst();
+        if (player.isPresent()) {
+            lobby.leaveLobby(player.get());
+        }
+
+        if (lobby.getPlayers().size() == 0) {
+            lobbies.remove(lobby);
+        }
+
         return lobby;
     }
 
